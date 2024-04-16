@@ -1,4 +1,3 @@
-import { verify } from "hono/jwt";
 import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { Hono } from "hono";
@@ -88,14 +87,32 @@ blogRouter.get("/:id", async (c) => {
   return c.json(post);
 });
 
-blogRouter.get("/bulk", async (c) => {
+blogRouter.get("/", async (c) => {
   const prisma = new PrismaClient({
     datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
 
-  const posts = await prisma.post.findMany({});
-
-  return c.json(posts);
+  try {
+    const posts = await prisma.post.findMany({});
+    if (posts) {
+      c.status(200);
+      return c.json({
+        status: true,
+        message: "posts fetched successfully",
+        posts: posts,
+      });
+    } else {
+      c.status(403);
+      return c.json({
+        error: "error while fetching posts",
+      });
+    }
+  } catch (error) {
+    c.status(403);
+    return c.json({
+      error: "error while fetching posts",
+    });
+  }
 });
 
 blogRouter.delete("/delete-blog/:id", async (c) => {
